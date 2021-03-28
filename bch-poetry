@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+_export () { export $1=$2; }
+
+_export PROG        $(basename $0)
+_export META        MYENV_BCH_POETRY
+_export ROOT        $(mydts uniq -r ${META})
+_export POETRY_HOME ${ROOT}/poetry
+_export POETRY_EXEC ${POETRY_HOME}/bin/poetry
+_export POETRY_URL  https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py
+
+usage () {
+cat << EOF
+USAGE:
+        ${PROG} SUBCOMMAND [ARGS]
+
+SUBCOMMANDS:
+        install           -- install poetry in tagged directory
+        reinstall         -- reinstall poetry in tagged directory
+        poetry [ARGS]     -- run the installed poetry with ARGS.
+
+DESCRIPTION:
+        This is a poetry front-end. It does not modify the behaviour of
+        poetry in any way, but it provides the client with an isolated
+        installation that does not affect others in any way.
+
+        Installation is always to [<ROOT>/poetry] where <ROOT> is a unique
+        directory with the tag [${META}].
+
+        If the directory is not found, or if multiple directories are found
+        with the tag, the above usage will fail. The purpose is to permit
+        the end user to choose poetry's home in real time simply by moving
+        the <ROOT> directory, without having to change any config files.
+
+IMPLEMENTION:
+        The myborg module [mydts] is used to indentify <ROOT>. At time of
+        this writing, it is identified by being the only directory that
+        contains the file [<ROOT>/.mytags/${META}].
+
+        This is subject to change. Consult the current version of [mydts]
+        for details.
+EOF
+}
+
+### IF HELP IS REQUESTED, GIVE HELP AND QUIT
+
+case $1. in
+    .|-h.|--help.)
+        usage
+        exit
+        ;;
+esac
+
+### IF ROOT NOT FOUND, WARN AND QUIT
+
+[ -z ${ROOT} ] && {
+    echo "[${PROG}]: Could not find directory with tag [${META}]."
+    exit
+}
+
+
+### HANDLE SUBCOMMAND AND QUIT
+
+case $1. in
+    install.)
+        curl -sSL ${POETRY_URL} | python - --no-modify-path
+        ;;
+    reinstall.)
+        rm -rf ${POETRY_HOME}
+        curl -sSL ${POETRY_URL} | python - --no-modify-path
+        ;;
+    poetry.)
+        [ -f ${POETRY_EXEC} ] || >&2 echo "[${PROG}]: Missing poetry excutable. (Is it installed?)"
+        [ -f ${POETRY_EXEC} ] || exit 66
+        [ -f ${POETRY_EXEC} ] && shift
+        [ -f ${POETRY_EXEC} ] &&  ${POETRY_EXEC} $*
+        ;;
+    *)
+        >&2 echo "[${PROG}]: unknown subcommand [$1]."
+        exit 99
+        ;;
+esac
