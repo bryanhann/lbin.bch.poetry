@@ -1,1 +1,2 @@
-export PATH=${PATH}:$(dirname ${PWD})
+#!/source/this/sh
+__lbin_default
